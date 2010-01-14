@@ -41,6 +41,7 @@ function js_out(){
     $files = array(
                 DOKU_INC.'lib/scripts/helpers.js',
                 DOKU_INC.'lib/scripts/events.js',
+                DOKU_INC.'lib/scripts/delay.js',
                 DOKU_INC.'lib/scripts/cookie.js',
                 DOKU_INC.'lib/scripts/script.js',
                 DOKU_INC.'lib/scripts/tw-sack.js',
@@ -106,7 +107,6 @@ function js_out(){
 
 
     // init stuff
-    js_runonstart("ajax_qsearch.init('qsearch__in','qsearch__out')");
     js_runonstart("addEvent(document,'click',closePopups)");
     js_runonstart('addTocToggle()');
     js_runonstart("initSizeCtl('size__ctl','wiki__text')");
@@ -151,7 +151,7 @@ function js_load($file){
     static $loaded = array();
 
     $data = io_readFile($file);
-    while(preg_match('#/\*\s*DOKUWIKI:include(_once)?\s+([\w\./]+)\s*\*/#',$data,$match)){
+    while(preg_match('#/\*\s*DOKUWIKI:include(_once)?\s+([\w\.\-_/]+)\s*\*/#',$data,$match)){
         $ifile = $match[2];
 
         // is it a include_once?
