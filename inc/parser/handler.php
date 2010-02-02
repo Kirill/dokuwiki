@@ -20,7 +20,7 @@ class Doku_Handler {
     var $rewriteBlocks = true;
 
     function Doku_Handler() {
-        $this->CallWriter = & new Doku_Handler_CallWriter($this);
+        $this->CallWriter = new Doku_Handler_CallWriter($this);
     }
 
     function _addCall($handler, $args, $pos) {
@@ -47,7 +47,7 @@ class Doku_Handler {
         }
 
         if ( $this->rewriteBlocks ) {
-            $B = & new Doku_Handler_Block();
+            $B = new Doku_Handler_Block();
             $this->calls = $B->process($this->calls);
         }
 
@@ -212,7 +212,7 @@ class Doku_Handler {
 
                 $this->_footnote = true;
 
-                $ReWriter = & new Doku_Handler_Nest($this->CallWriter,'footnote_close');
+                $ReWriter = new Doku_Handler_Nest($this->CallWriter,'footnote_close');
                 $this->CallWriter = & $ReWriter;
                 $this->_addCall('footnote_open', array(), $pos);
             break;
@@ -240,7 +240,7 @@ class Doku_Handler {
     function listblock($match, $state, $pos) {
         switch ( $state ) {
             case DOKU_LEXER_ENTER:
-                $ReWriter = & new Doku_Handler_List($this->CallWriter);
+                $ReWriter = new Doku_Handler_List($this->CallWriter);
                 $this->CallWriter = & $ReWriter;
                 $this->_addCall('list_open', array($match), $pos);
             break;
@@ -302,7 +302,7 @@ class Doku_Handler {
     function preformatted($match, $state, $pos) {
         switch ( $state ) {
             case DOKU_LEXER_ENTER:
-                $ReWriter = & new Doku_Handler_Preformatted($this->CallWriter);
+                $ReWriter = new Doku_Handler_Preformatted($this->CallWriter);
                 $this->CallWriter = & $ReWriter;
                 $this->_addCall('preformatted_start',array(), $pos);
             break;
@@ -328,7 +328,7 @@ class Doku_Handler {
         switch ( $state ) {
 
             case DOKU_LEXER_ENTER:
-                $ReWriter = & new Doku_Handler_Quote($this->CallWriter);
+                $ReWriter = new Doku_Handler_Quote($this->CallWriter);
                 $this->CallWriter = & $ReWriter;
                 $this->_addCall('quote_start',array($match), $pos);
             break;
@@ -580,7 +580,7 @@ class Doku_Handler {
 
             case DOKU_LEXER_ENTER:
 
-                $ReWriter = & new Doku_Handler_Table($this->CallWriter);
+                $ReWriter = new Doku_Handler_Table($this->CallWriter);
                 $this->CallWriter = & $ReWriter;
 
                 $this->_addCall('table_start', array(), $pos);
@@ -589,10 +589,11 @@ class Doku_Handler {
                 } else {
                     $this->_addCall('tablecell', array(), $pos);
                 }
+                $this->status['table_begin'] = $pos;
             break;
 
             case DOKU_LEXER_EXIT:
-                $this->_addCall('table_end', array(), $pos);
+                $this->_addCall('table_end', array($this->status['table_begin']+1, $pos), $pos);
                 $this->CallWriter->process();
                 $ReWriter = & $this->CallWriter;
                 $this->CallWriter = & $ReWriter->CallWriter;
@@ -1204,7 +1205,7 @@ class Doku_Handler_Table {
                     $this->tableCell($call);
                 break;
                 case 'table_end':
-                    $this->tableRowClose(array('tablerow_close',$call[1],$call[2]));
+                    $this->tableRowClose(array('tablerow_close', array()));
                     $this->tableEnd($call);
                 break;
                 default:
@@ -1222,7 +1223,7 @@ class Doku_Handler_Table {
     }
 
     function tableEnd($call) {
-        $this->tableCalls[] = array('table_close',array(),$call[2]);
+        $this->tableCalls[] = array('table_close',$call[1],$call[2]);
         $this->finalizeTable();
     }
 

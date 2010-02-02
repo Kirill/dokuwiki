@@ -851,8 +851,9 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
         $this->doc .= '<table class="inline">'.DOKU_LF;
     }
 
-    function table_close(){
+    function table_close($begin, $end){
         $this->doc .= '</table>'.DOKU_LF;
+        $this->doc .= '<!-- TABLE ['. $begin .'-'.$end.'] -->';
     }
 
     function tablerow_open(){
@@ -966,7 +967,7 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
             }elseif($ext == 'jpg' || $ext == 'jpeg'){
                 //try to use the caption from IPTC/EXIF
                 require_once(DOKU_INC.'inc/JpegMeta.php');
-                $jpeg =& new JpegMeta(mediaFN($src));
+                $jpeg =new JpegMeta(mediaFN($src));
                 if($jpeg !== false) $cap = $jpeg->getTitle();
                 if($cap){
                     $title = $this->_xmlEntities($cap);

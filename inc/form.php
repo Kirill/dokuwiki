@@ -283,6 +283,27 @@ class Doku_Form {
         echo $this->getForm();
     }
 
+    /**
+     * Add a radio set
+     *
+     * This function adds a set of radio buttons to the form. If $_POST[$name]
+     * is set, this radio is preselected, else the first radio button.
+     *
+     * @param string    $name    The HTML field name
+     * @param array     $entries An array of entries $value => $caption
+     *
+     * @author Adrian Lang <lang@cosmocode.de>
+     */
+
+    function addRadioSet($name, $entries) {
+        $value = (isset($_POST[$name]) && isset($entries[$_POST[$name]])) ?
+                 $_POST[$name] : key($entries);
+        foreach($entries as $val => $cap) {
+            $data = ($value === $val) ? array('checked' => 'checked') : array();
+            $this->addElement(form_makeRadioField($name, $val, $cap, '', '', $data));
+        }
+    }
+
 }
 
 /**
@@ -859,7 +880,9 @@ function form_menufield($attrs) {
     $s .= ' <select '.buildAttributes($attrs,true).'>'.DOKU_LF;
     if (!empty($attrs['_options'])) {
         $selected = false;
-        for($n=0;$n<count($attrs['_options']);$n++){
+
+        $cnt = count($attrs['_options']);
+        for($n=0; $n < $cnt; $n++){
             @list($value,$text,$select) = $attrs['_options'][$n];
             $p = '';
             if (!is_null($text))

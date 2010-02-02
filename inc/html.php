@@ -91,14 +91,18 @@ function html_secedit_button($matches){
     global $ID;
     global $INFO;
 
-    $section = $matches[2];
-    $name = $matches[1];
+    $edittarget = ($matches[1] === 'SECTION') ? 'plain' :
+                  strtolower($matches[1]);
+
+    $section = $matches[3];
+    $name = $matches[2];
 
     $secedit  = '';
-    $secedit .= '<div class="secedit">';
+    $secedit .= '<div class="secedit editbutton_' . $edittarget . '">';
     $secedit .= html_btn('secedit',$ID,'',
             array('do'      => 'edit',
-                'lines'   => "$section",
+                'lines'   => $section,
+                'edittarget' => $edittarget,
                 'rev' => $INFO['lastmod']),
             'post', $name);
     $secedit .= '</div>';
@@ -113,11 +117,13 @@ function html_secedit_button($matches){
 function html_secedit($text,$show=true){
     global $INFO;
 
+    $regexp = '#<!-- ([A-Z]+) (?:"(.*)" )?\[(\d+-\d*)\] -->#';
+
     if($INFO['writable'] && $show && !$INFO['rev']){
-        $text = preg_replace_callback('#<!-- SECTION "(.*?)" \[(\d+-\d*)\] -->#',
+        $text = preg_replace_callback($regexp,
                 'html_secedit_button', $text);
     }else{
-        $text = preg_replace('#<!-- SECTION "(.*?)" \[(\d+-\d*)\] -->#','',$text);
+        $text = preg_replace($regexp,'',$text);
     }
 
     return $text;
@@ -181,7 +187,7 @@ function html_btn($name,$id,$akey,$params,$method='get',$tooltip=''){
         $tip = htmlspecialchars($label);
     }
 
-    $ret .= '<input type="submit" value="'.htmlspecialchars($label).'" class="button" ';
+    $ret .= '<input type="submit" value="'.hsc($label).'" class="button" ';
     if($akey){
         $tip .= ' ['.strtoupper($akey).']';
         $ret .= 'accesskey="'.$akey.'" ';
@@ -1104,11 +1110,9 @@ function html_updateprofile(){
 }
 
 /**
- * This displays the edit form (lots of logic included)
+ * Preprocess edit form data
  *
- * @fixme    this is a huge lump of code and should be modularized
  * @triggers HTML_PAGE_FROMTEMPLATE
- * @triggers HTML_EDITFORM_INJECTION
  * @author   Andreas Gohr <andi@splitbrain.org>
  */
 function html_edit($text=null,$include='edit'){ //FIXME: include needed?
@@ -1122,7 +1126,6 @@ function html_edit($text=null,$include='edit'){ //FIXME: include needed?
     global $SUM;
     global $lang;
     global $conf;
-    global $license;
 
     //set summary default
     if(!$SUM){
@@ -1176,7 +1179,37 @@ function html_edit($text=null,$include='edit'){ //FIXME: include needed?
         print p_locale_xhtml('read');
     }
     if(!$DATE) $DATE = $INFO['lastmod'];
+
+    $data = compact('wr', 'text', 'mod', 'check');
+    trigger_event('HTML_EDIT_FORMSELECTION', $data, 'html_edit_form', true);
+}
+
+/**
+ * Display the default edit form
+ *
+ * Is the default action for HTML_EDIT_FORMSELECTION.
+ *
+ * @triggers HTML_EDITFORM_OUTPUT
+ */
+function html_edit_form($param) {
+    extract($param);
+    global $conf;
+    global $license;
+    global $lang;
+    global $REV;
+    global $DATE;
+    global $PRE;
+    global $SUF;
+    global $INFO;
+    global $SUM;
+    global $ID;
     ?>
+            <?php if($wr){?>
+                <script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--
+                    <?php /* sets changed to true when previewed */?>
+                    textChanged = <?php ($mod) ? print 'true' : print 'false' ?>;
+                //--><!]]></script>
+            <?php } ?>
         <div style="width:99%;">
 
         <div class="toolbar">
@@ -1184,12 +1217,6 @@ function html_edit($text=null,$include='edit'){ //FIXME: include needed?
         <div id="tool__bar"><?php if($wr){?><a href="<?php echo DOKU_BASE?>lib/exe/mediamanager.php?ns=<?php echo $INFO['namespace']?>"
             target="_blank"><?php echo $lang['mediaselect'] ?></a><?php }?></div>
 
-            <?php if($wr){?>
-                <script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--
-                    <?php /* sets changed to true when previewed */?>
-                    textChanged = <?php ($mod) ? print 'true' : print 'false' ?>;
-                //--><!]]></script>
-            <?php } ?>
         </div>
         <?php
         $form = new Doku_Form(array('id' => 'dw__editform'));

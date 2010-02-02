@@ -741,8 +741,8 @@ div.dokuwiki ul.search_quickhits li {
   width: 30%;
 }
 
-div.dokuwiki div.section_highlight {
-  background-color: __background_alt__;
+div.dokuwiki .section_highlight {
+  background-color: __background_alt__ !important;
 }
 
 /* ------------------ Additional ---------------------- */
@@ -833,3 +833,4 @@ div.dokuwiki div.imagemeta img.thumb {
   float: left;
   margin-right: 0.1em;
 }
+
