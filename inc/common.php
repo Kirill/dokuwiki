@@ -808,7 +808,6 @@ function rawWiki($id,$rev=''){
 function pageTemplate($data){
     $id = $data[0];
     global $conf;
-    global $INFO;
 
     $path = dirname(wikiFN($id));
 
@@ -825,7 +824,16 @@ function pageTemplate($data){
             $path = substr($path, 0, strrpos($path, '/'));
         }
     }
-    if(!$tpl) return '';
+    return isset($tpl) ? parsePageTemplate($tpl, $id) : '';
+}
+
+/**
+ * Performs common page template replacements
+ *
+ * @author Andreas Gohr <andi@splitbrain.org>
+ */
+function parsePageTemplate($tpl, $id) {
+    global $USERINFO;
 
     // replace placeholders
     $file = noNS($id);
@@ -857,8 +865,8 @@ function pageTemplate($data){
                 utf8_ucwords($page),
                 utf8_strtoupper($page),
                 $_SERVER['REMOTE_USER'],
-                $INFO['userinfo']['name'],
-                $INFO['userinfo']['mail'],
+                $USERINFO['name'],
+                $USERINFO['mail'],
                 $conf['dformat'],
                 ), $tpl);
 
@@ -867,7 +875,6 @@ function pageTemplate($data){
 
     return $tpl;
 }
-
 
 /**
  * Returns the raw Wiki Text in three slices.

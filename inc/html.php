@@ -82,34 +82,6 @@ function html_login(){
 }
 
 /**
- * prints a section editing button
- * used as a callback in html_secedit
- *
- * @author Andreas Gohr <andi@splitbrain.org>
- */
-function html_secedit_button($matches){
-    global $ID;
-    global $INFO;
-
-    $edittarget = ($matches[1] === 'SECTION') ? 'plain' :
-                  strtolower($matches[1]);
-
-    $section = $matches[3];
-    $name = $matches[2];
-
-    $secedit  = '';
-    $secedit .= '<div class="secedit editbutton_' . $edittarget . '">';
-    $secedit .= html_btn('secedit',$ID,'',
-            array('do'      => 'edit',
-                'lines'   => $section,
-                'edittarget' => $edittarget,
-                'rev' => $INFO['lastmod']),
-            'post', $name);
-    $secedit .= '</div>';
-    return $secedit;
-}
-
-/**
  * inserts section edit buttons if wanted or removes the markers
  *
  * @author Andreas Gohr <andi@splitbrain.org>
@@ -117,16 +89,59 @@ function html_secedit_button($matches){
 function html_secedit($text,$show=true){
     global $INFO;
 
-    $regexp = '#<!-- ([A-Z]+) (?:"(.*)" )?\[(\d+-\d*)\] -->#';
+    $regexp = '#<!-- EDIT(\d+) ([A-Z]+) (?:"([^"]*)" )?\[(\d+-\d*)\] -->#';
 
-    if($INFO['writable'] && $show && !$INFO['rev']){
-        $text = preg_replace_callback($regexp,
-                'html_secedit_button', $text);
-    }else{
-        $text = preg_replace($regexp,'',$text);
+    if(!$INFO['writable'] || !$show || $INFO['rev']){
+        return preg_replace($regexp,'',$text);
     }
 
-    return $text;
+    return preg_replace_callback($regexp,
+                'html_secedit_button', $text);
+}
+
+/**
+ * prepares section edit button data for event triggering
+ * used as a callback in html_secedit
+ *
+ * @triggers HTML_SECEDIT_BUTTON
+ * @author Andreas Gohr <andi@splitbrain.org>
+ */
+function html_secedit_button($matches){
+    $data = array('secid'  => $matches[1],
+                  'target' => strtolower($matches[2]),
+                  'range'  => $matches[count($matches) - 1]);
+    if (count($matches) === 5) {
+        $data['name'] = $matches[3];
+    }
+
+    return trigger_event('HTML_SECEDIT_BUTTON', $data,
+                         'html_secedit_get_button');
+}
+
+/**
+ * prints a section editing button
+ * used as default action form HTML_SECEDIT_BUTTON
+ *
+ * @author Adrian Lang <lang@cosmocode.de>
+ */
+function html_secedit_get_button($data) {
+    global $ID;
+    global $INFO;
+
+    if (!isset($data['name']) || $data['name'] === '') return;
+
+    $name = $data['name'];
+    unset($data['name']);
+
+    $secid = $data['secid'];
+    unset($data['secid']);
+
+    return "<div class='secedit editbutton_" . $data['target'] .
+                       " editbutton_" . $secid . "'>" .
+           html_btn('secedit', $ID, '',
+                    array_merge(array('do'  => 'edit',
+                                      'rev' => $INFO['lastmod']), $data),
+                    'post', $name) . '</div>';
 }
 
 /**
