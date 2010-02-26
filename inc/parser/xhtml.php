@@ -63,6 +63,9 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
      */
     protected function finishSectionEdit($end) {
         list($id, $start, $type, $title) = array_pop($this->sectionedits);
+        if ($end <= $start) {
+            return;
+        }
         $this->doc .= "<!-- EDIT$id " . strtoupper($type) . ' ';
         if (!is_null($title)) {
             $this->doc .= '"' . str_replace('"', '', $title) . '" ';
@@ -183,7 +186,7 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
     }
 
     function section_open($level) {
-        $this->doc .= "<div class='level$level'>".DOKU_LF;
+        $this->doc .= '<div class="level' . $level . '">' . DOKU_LF;
     }
 
     function section_close() {
