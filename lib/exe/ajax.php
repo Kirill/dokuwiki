@@ -13,10 +13,7 @@ if(!count($_POST) && $HTTP_RAW_POST_DATA){
 
 if(!defined('DOKU_INC')) define('DOKU_INC',dirname(__FILE__).'/../../');
 require_once(DOKU_INC.'inc/init.php');
-require_once(DOKU_INC.'inc/common.php');
-require_once(DOKU_INC.'inc/pageutils.php');
-require_once(DOKU_INC.'inc/auth.php');
-//close sesseion
+//close session
 session_write_close();
 
 header('Content-Type: text/html; charset=utf-8');
@@ -57,9 +54,6 @@ function ajax_qsearch(){
   if(empty($query)) $query = cleanID($_GET['q']);
   if(empty($query)) return;
 
-  require_once(DOKU_INC.'inc/html.php');
-  require_once(DOKU_INC.'inc/fulltext.php');
-
   $data = array();
   $data = ft_pageLookup($query);
 
@@ -94,10 +88,6 @@ function ajax_suggestions() {
   $query = cleanID($_POST['q']);
   if(empty($query)) $query = cleanID($_GET['q']);
   if(empty($query)) return;
-
-  require_once(DOKU_INC.'inc/html.php');
-  require_once(DOKU_INC.'inc/fulltext.php');
-  require_once(DOKU_INC.'inc/JSON.php');
 
   $data = array();
   $data = ft_pageLookup($query);
@@ -181,8 +171,6 @@ function ajax_draftdel(){
  */
 function ajax_medians(){
   global $conf;
-  require_once(DOKU_INC.'inc/search.php');
-  require_once(DOKU_INC.'inc/media.php');
 
   // wanted namespace
   $ns  = cleanID($_POST['ns']);
@@ -208,23 +196,9 @@ function ajax_medians(){
 function ajax_medialist(){
   global $conf;
   global $NS;
-  require_once(DOKU_INC.'inc/media.php');
-  require_once(DOKU_INC.'inc/template.php');
 
   $NS = $_POST['ns'];
   tpl_mediaContent(true);
-}
-
-/**
- * Return list of search result for the Mediamanager
- *
- * @author Tobias Sarnowski <sarnowski@cosmocode.de>
- */
-function ajax_mediasearchlist(){
-  global $conf;
-  require_once(DOKU_INC.'inc/media.php');
-
-  media_searchlist($_POST['ns']);
 }
 
 /**
@@ -234,8 +208,6 @@ function ajax_mediasearchlist(){
  */
 function ajax_index(){
   global $conf;
-  require_once(DOKU_INC.'inc/search.php');
-  require_once(DOKU_INC.'inc/html.php');
 
   // wanted namespace
   $ns  = cleanID($_POST['idx']);
@@ -263,7 +235,6 @@ function ajax_index(){
 function ajax_linkwiz(){
   global $conf;
   global $lang;
-  require_once(DOKU_INC.'inc/html.php');
 
   $q  = ltrim($_POST['q'],':');
   $id = noNS($q);
@@ -279,8 +250,6 @@ function ajax_linkwiz(){
   if($q && !$ns){
 
     // use index to lookup matching pages
-    require_once(DOKU_INC.'inc/fulltext.php');
-    require_once(DOKU_INC.'inc/parserutils.php');
     $pages = array();
     $pages = ft_pageLookup($id,false);
 
@@ -312,13 +281,13 @@ function ajax_linkwiz(){
 
   }else{
 
-    require_once(DOKU_INC.'inc/search.php');
     $opts = array(
       'depth' => 1,
       'listfiles' => true,
       'listdirs'  => true,
       'pagesonly' => true,
       'firsthead' => true,
+      'sneakyacl' => $conf['sneaky_index'],
     );
     if($id) $opts['filematch'] = '^.*\/'.$id;
     if($id) $opts['dirmatch']  = '^.*\/'.$id;

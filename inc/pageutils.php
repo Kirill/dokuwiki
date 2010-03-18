@@ -23,10 +23,11 @@ function getID($param='id',$clean=true){
 
     $id = isset($_REQUEST[$param]) ? $_REQUEST[$param] : null;
 
-    $request = $_SERVER['REQUEST_URI'];
-
     //construct page id from request URI
     if(empty($id) && $conf['userewrite'] == 2){
+        $request = $_SERVER['REQUEST_URI'];
+        $script = '';
+
         //get the script URL
         if($conf['basedir']){
             $relpath = '';
@@ -35,15 +36,14 @@ function getID($param='id',$clean=true){
             }
             $script = $conf['basedir'].$relpath.basename($_SERVER['SCRIPT_FILENAME']);
 
-        }elseif($_SERVER['DOCUMENT_ROOT'] && $_SERVER['PATH_TRANSLATED']){
-            $request = preg_replace ('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/','',
-                    $_SERVER['PATH_TRANSLATED']);
+        }elseif($_SERVER['PATH_INFO']){
+            $request = $_SERVER['PATH_INFO'];
+        }elseif($_SERVER['SCRIPT_NAME']){
+            $script = $_SERVER['SCRIPT_NAME'];
         }elseif($_SERVER['DOCUMENT_ROOT'] && $_SERVER['SCRIPT_FILENAME']){
             $script = preg_replace ('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/','',
                     $_SERVER['SCRIPT_FILENAME']);
             $script = '/'.$script;
-        }else{
-            $script = $_SERVER['SCRIPT_NAME'];
         }
 
         //clean script and request (fixes a windows problem)
@@ -60,7 +60,7 @@ function getID($param='id',$clean=true){
     }
 
     // Namespace autolinking from URL
-    if(substr($id,-1) == ':' || ($conf['useslash'] && substr($id,-1) == '/') || $id == ''){
+    if(substr($id,-1) == ':' || ($conf['useslash'] && substr($id,-1) == '/')){
         if(page_exists($id.$conf['start'])){
             // start page inside namespace
             $id = $id.$conf['start'];
@@ -198,7 +198,7 @@ function noNSorNS($id) {
  * Creates a XHTML valid linkid from a given headline title
  *
  * @param string  $title   The headline title
- * @param array   $check   List of existing IDs
+ * @param array   $check   Existing IDs (title => number)
  * @author Andreas Gohr <andi@splitbrain.org>
  */
 function sectionID($title,&$check) {
@@ -212,12 +212,11 @@ function sectionID($title,&$check) {
 
     if(is_array($check)){
         // make sure tiles are unique
-        $num = '';
-        while(in_array($title.$num,$check)){
-            ($num) ? $num++ : $num = 1;
+        if (!array_key_exists ($title,$check)) {
+           $check[$title] = 0;
+        } else {
+           $title .= ++ $check[$title];
         }
-        $title = $title.$num;
-        $check[] = $title;
     }
 
     return $title;

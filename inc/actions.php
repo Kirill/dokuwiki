@@ -7,8 +7,6 @@
  */
 
 if(!defined('DOKU_INC')) die('meh.');
-require_once(DOKU_INC.'inc/template.php');
-
 
 /**
  * Call the needed action handlers
@@ -111,7 +109,7 @@ function act_dispatch(){
             $ACT = act_draftsave($ACT);
 
         //edit
-        if(($ACT == 'edit' || $ACT == 'preview') && $INFO['editable']){
+        if(($ACT == 'edit' || $ACT == 'preview' || $ACT == 'recover') && $INFO['editable']){
             $ACT = act_edit($ACT);
         }else{
             unlock($ID); //try to unlock
@@ -204,7 +202,7 @@ function act_clean($act){
     if(!in_array($act,array('login','logout','register','save','cancel','edit','draft',
                     'preview','search','show','check','index','revisions',
                     'diff','recent','backlink','admin','subscribe','revert',
-                    'unsubscribe','profile','resendpwd','recover','wordblock',
+                    'unsubscribe','profile','resendpwd','recover',
                     'draftdel','subscribens','unsubscribens',)) && substr($act,0,7) != 'export_' ) {
         msg('Command unknown: '.htmlspecialchars($act),-1);
         return 'show';
@@ -311,12 +309,16 @@ function act_save($act){
     global $TEXT;
     global $SUF;
     global $SUM;
+    global $lang;
+    global $INFO;
 
     //spam check
-    if(checkwordblock())
-        return 'wordblock';
-    //conflict check //FIXME use INFO
-    if($DATE != 0 && @filemtime(wikiFN($ID)) > $DATE )
+    if(checkwordblock()) {
+        msg($lang['wordblock'], -1);
+        return 'edit';
+    }
+    //conflict check
+    if($DATE != 0 && $INFO['meta']['date']['modified'] > $DATE )
         return 'conflict';
 
     //save it
@@ -353,8 +355,11 @@ function act_revert($act){
     }
 
     // spam check
-    if(checkwordblock($Text))
-        return 'wordblock';
+
+    if (checkwordblock($text)) {
+        msg($lang['wordblock'], -1);
+        return 'edit';
+    }
 
     saveWikiText($ID,$text,$sum,false);
     msg($sum,1);
@@ -442,13 +447,47 @@ function act_auth($act){
 }
 
 /**
- * Handle 'edit', 'preview'
+ * Handle 'edit', 'preview', 'recover'
  *
  * @author Andreas Gohr <andi@splitbrain.org>
  */
 function act_edit($act){
     global $ID;
     global $INFO;
+
+    global $TEXT;
+    global $RANGE;
+    global $PRE;
+    global $SUF;
+    global $REV;
+    global $SUM;
+    global $lang;
+    global $DATE;
+
+    if (!isset($TEXT)) {
+        if ($INFO['exists']) {
+            if ($RANGE) {
+                list($PRE,$TEXT,$SUF) = rawWikiSlices($RANGE,$ID,$REV);
+            } else {
+                $TEXT = rawWiki($ID,$REV);
+            }
+        } else {
+            $TEXT = pageTemplate($ID);
+        }
+    }
+
+    //set summary default
+    if(!$SUM){
+        if($REV){
+            $SUM = $lang['restored'];
+        }elseif(!$INFO['exists']){
+            $SUM = $lang['created'];
+        }
+    }
+
+    // Use the date of the newest revision, not of the revision we edit
+    // This is used for conflict detection
+    if(!$DATE) $DATE = $INFO['meta']['date']['modified'];
 
     //check if locked by anyone - if not lock for my self
     $lockedby = checklock($ID);
@@ -582,7 +621,6 @@ function act_subscription($act){
     $action = $params['action'];
 
     // Perform action.
-    require_once DOKU_INC . 'inc/subscription.php';
     if (!subscription_set($_SERVER['REMOTE_USER'], $target, $style, $data)) {
         throw new Exception(sprintf($lang["subscr_{$action}_error"],
                                     hsc($INFO['userinfo']['name']),
