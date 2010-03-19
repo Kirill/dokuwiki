@@ -49,7 +49,7 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
      * @return string A marker class for the starting HTML element
      * @author Adrian Lang <lang@cosmocode.de>
      */
-    protected function startSectionEdit($start, $type, $title = null) {
+    public function startSectionEdit($start, $type, $title = null) {
         static $lastsecid = 0;
         $this->sectionedits[] = array(++$lastsecid, $start, $type, $title);
         return 'sectionedit' . $lastsecid;
@@ -58,19 +58,20 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
     /**
      * Finish an edit section range
      *
-     * @param $pos int The byte position for the edit end
+     * @param $end int The byte position for the edit end; null for the rest of
+                       the page
      * @author Adrian Lang <lang@cosmocode.de>
      */
-    protected function finishSectionEdit($end) {
+    public function finishSectionEdit($end = null) {
         list($id, $start, $type, $title) = array_pop($this->sectionedits);
-        if ($end <= $start) {
+        if (!is_null($end) && $end <= $start) {
             return;
         }
         $this->doc .= "<!-- EDIT$id " . strtoupper($type) . ' ';
         if (!is_null($title)) {
             $this->doc .= '"' . str_replace('"', '', $title) . '" ';
         }
-        $this->doc .= "[$start-" . ($end === 0 ? '' : $end) . '] -->';
+        $this->doc .= "[$start-" . (is_null($end) ? '' : $end) . '] -->';
     }
 
     function getFormat(){
@@ -92,7 +93,7 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
                 // marker.
                 array_pop($this->sectionedits);
             } else {
-                $this->finishSectionEdit(0);
+                $this->finishSectionEdit();
             }
         }
 

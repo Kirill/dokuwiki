@@ -20,13 +20,8 @@ if (isset($_SERVER['HTTP_X_DOKUWIKI_DO'])){
     $ACT = 'show';
 }
 
+// load and initialize the core system
 require_once(DOKU_INC.'inc/init.php');
-require_once(DOKU_INC.'inc/common.php');
-require_once(DOKU_INC.'inc/events.php');
-require_once(DOKU_INC.'inc/pageutils.php');
-require_once(DOKU_INC.'inc/html.php');
-require_once(DOKU_INC.'inc/auth.php');
-require_once(DOKU_INC.'inc/actions.php');
 
 //import variables
 $QUERY = trim($_REQUEST['id']);
@@ -39,7 +34,9 @@ $RANGE = $_REQUEST['range'];
 $HIGH  = $_REQUEST['s'];
 if(empty($HIGH)) $HIGH = getGoogleQuery();
 
-$TEXT  = cleanText($_POST['wikitext']);
+if (isset($_POST['wikitext'])) {
+    $TEXT  = cleanText($_POST['wikitext']);
+}
 $PRE   = cleanText($_POST['prefix']);
 $SUF   = cleanText($_POST['suffix']);
 $SUM   = $_REQUEST['summary'];

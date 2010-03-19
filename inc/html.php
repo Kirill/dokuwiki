@@ -8,8 +8,6 @@
 
 if(!defined('DOKU_INC')) die('meh.');
 if(!defined('NL')) define('NL',"\n");
-require_once(DOKU_INC.'inc/parserutils.php');
-require_once(DOKU_INC.'inc/form.php');
 
 /**
  * Convenience function to quickly build a wikilink
@@ -89,7 +87,7 @@ function html_login(){
 function html_secedit($text,$show=true){
     global $INFO;
 
-    $regexp = '#<!-- EDIT(\d+) ([A-Z]+) (?:"([^"]*)" )?\[(\d+-\d*)\] -->#';
+    $regexp = '#<!-- EDIT(\d+) ([A-Z_]+) (?:"([^"]*)" )?\[(\d+-\d*)\] -->#';
 
     if(!$INFO['writable'] || !$show || $INFO['rev']){
         return preg_replace($regexp,'',$text);
@@ -313,8 +311,6 @@ function html_hilight_callback($m) {
  * @author Andreas Gohr <andi@splitbrain.org>
  */
 function html_search(){
-    require_once(DOKU_INC.'inc/search.php');
-    require_once(DOKU_INC.'inc/fulltext.php');
     global $conf;
     global $QUERY;
     global $ID;
@@ -373,7 +369,7 @@ function html_search(){
             print html_wikilink(':'.$id,useHeading('navigation')?null:$id,$regex);
             if($cnt !== 0){
                 print ': <span class="search_cnt">'.$cnt.' '.$lang['hits'].'</span><br />';
-                if($num < 15){ // create snippets for the first number of matches only #FIXME add to conf ?
+                if($num < FT_SNIPPET_NUMBER){ // create snippets for the first number of matches only
                     print '<div class="search_snippet">'.ft_snippet($id,$regex).'</div>';
                 }
                 $num++;
@@ -707,7 +703,6 @@ function html_recent($first=0){
  * @author Andreas Gohr <andi@splitbrain.org>
  */
 function html_index($ns){
-    require_once(DOKU_INC.'inc/search.php');
     global $conf;
     global $ID;
     $dir = $conf['datadir'];
@@ -845,7 +840,6 @@ function html_buildlist($data,$class,$func,$lifunc='html_li_default'){
  * @author Michael Klier <chi@chimeric.de>
  */
 function html_backlinks(){
-    require_once(DOKU_INC.'inc/fulltext.php');
     global $ID;
     global $conf;
     global $lang;
@@ -873,7 +867,6 @@ function html_backlinks(){
  * @author Andreas Gohr <andi@splitbrain.org>
  */
 function html_diff($text='',$intro=true){
-    require_once(DOKU_INC.'inc/DifferenceEngine.php');
     global $ID;
     global $REV;
     global $lang;
@@ -1127,76 +1120,105 @@ function html_updateprofile(){
 /**
  * Preprocess edit form data
  *
- * @triggers HTML_PAGE_FROMTEMPLATE
  * @author   Andreas Gohr <andi@splitbrain.org>
  */
-function html_edit($text=null,$include='edit'){ //FIXME: include needed?
+function html_edit(){
     global $ID;
     global $REV;
     global $DATE;
-    global $RANGE;
     global $PRE;
     global $SUF;
     global $INFO;
     global $SUM;
     global $lang;
     global $conf;
+    global $TEXT;
 
-    //set summary default
-    if(!$SUM){
-        if($REV){
-            $SUM = $lang['restored'];
-        }elseif(!$INFO['exists']){
-            $SUM = $lang['created'];
-        }
+    if (isset($_REQUEST['changecheck'])) {
+        $check = $_REQUEST['changecheck'];
+    } elseif(!$INFO['exists']){
+        // $TEXT has been loaded from page template
+        $check = md5('');
+    } else {
+        $check = md5($TEXT);
     }
-
-    //no text? Load it!
-    if(!isset($text)){
-        $pr = false; //no preview mode
-        if($INFO['exists']){
-            if($RANGE){
-                list($PRE,$text,$SUF) = rawWikiSlices($RANGE,$ID,$REV);
-            }else{
-                $text = rawWiki($ID,$REV);
-            }
-            $check = md5($text);
-            $mod = false;
-        }else{
-            //try to load a pagetemplate
-            $data = array($ID);
-            $text = trigger_event('HTML_PAGE_FROMTEMPLATE',$data,'pageTemplate',true);
-            $check = md5('');
-            $mod = $text!=='';
-        }
-    }else{
-        $pr = true; //preview mode
-        if (isset($_REQUEST['changecheck'])) {
-            $check = $_REQUEST['changecheck'];
-            $mod = md5($text)!==$check;
-        } else {
-            // Why? Assume default text is unmodified.
-            $check = md5($text);
-            $mod = false;
-        }
-    }
+    $mod = md5($TEXT) !== $check;
 
     $wr = $INFO['writable'] && !$INFO['locked'];
+    $include = 'edit';
     if($wr){
-        if ($REV) print p_locale_xhtml('editrev');
-        print p_locale_xhtml($include);
+        if ($REV) $include = 'editrev';
     }else{
         // check pseudo action 'source'
         if(!actionOK('source')){
             msg('Command disabled: source',-1);
             return;
         }
-        print p_locale_xhtml('read');
+        $include = 'read';
     }
-    if(!$DATE) $DATE = $INFO['lastmod'];
 
-    $data = compact('wr', 'text', 'mod', 'check');
+    global $license;
+
+    $form = new Doku_Form(array('id' => 'dw__editform'));
+    $form->addHidden('id', $ID);
+    $form->addHidden('rev', $REV);
+    $form->addHidden('date', $DATE);
+    $form->addHidden('prefix', $PRE);
+    $form->addHidden('suffix', $SUF);
+    $form->addHidden('changecheck', $check);
+
+    $data = compact('wr', 'form');
+    $data['media_manager'] = true;
+    $data['intro_locale'] = $include;
     trigger_event('HTML_EDIT_FORMSELECTION', $data, 'html_edit_form', true);
+    if (isset($data['intro_locale'])) {
+        echo p_locale_xhtml($data['intro_locale']);
+    }
+
+    $form->addElement(form_makeOpenTag('div', array('id'=>'wiki__editbar')));
+    $form->addElement(form_makeOpenTag('div', array('id'=>'size__ctl')));
+    $form->addElement(form_makeCloseTag('div'));
+    if ($wr) {
+        $form->addElement(form_makeOpenTag('div', array('class'=>'editButtons')));
+        $form->addElement(form_makeButton('submit', 'save', $lang['btn_save'], array('id'=>'edbtn__save', 'accesskey'=>'s', 'tabindex'=>'4')));
+        $form->addElement(form_makeButton('submit', 'preview', $lang['btn_preview'], array('id'=>'edbtn__preview', 'accesskey'=>'p', 'tabindex'=>'5')));
+        $form->addElement(form_makeButton('submit', 'draftdel', $lang['btn_cancel'], array('tabindex'=>'6')));
+        $form->addElement(form_makeCloseTag('div'));
+        $form->addElement(form_makeOpenTag('div', array('class'=>'summary')));
+        $form->addElement(form_makeTextField('summary', $SUM, $lang['summary'], 'edit__summary', 'nowrap', array('size'=>'50', 'tabindex'=>'2')));
+        $elem = html_minoredit();
+        if ($elem) $form->addElement($elem);
+        $form->addElement(form_makeCloseTag('div'));
+    }
+    $form->addElement(form_makeCloseTag('div'));
+    if($wr && $conf['license']){
+        $form->addElement(form_makeOpenTag('div', array('class'=>'license')));
+        $out  = $lang['licenseok'];
+        $out .= '<a href="'.$license[$conf['license']]['url'].'" rel="license" class="urlextern"';
+        if(isset($conf['target']['extern'])) $out .= ' target="'.$conf['target']['extern'].'"';
+        $out .= '> '.$license[$conf['license']]['name'].'</a>';
+        $form->addElement($out);
+        $form->addElement(form_makeCloseTag('div'));
+    }
+
+    if ($wr) {
+        // sets changed to true when previewed
+        echo '<script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--';
+        echo 'textChanged = ' . ($mod ? 'true' : 'false');
+        echo '//--><!]]></script>';
+    } ?>
+    <div style="width:99%;">
+
+    <div class="toolbar">
+    <div id="draft__status"><?php if(!empty($INFO['draft'])) echo $lang['draftdate'].' '.dformat();?></div>
+    <div id="tool__bar"><?php if ($wr && $data['media_manager']){?><a href="<?php echo DOKU_BASE?>lib/exe/mediamanager.php?ns=<?php echo $INFO['namespace']?>"
+        target="_blank"><?php echo $lang['mediaselect'] ?></a><?php }?></div>
+
+    </div>
+    <?php
+
+    html_form('edit', $form);
+    print '</div>'.NL;
 }
 
 /**
@@ -1207,70 +1229,11 @@ function html_edit($text=null,$include='edit'){ //FIXME: include needed?
  * @triggers HTML_EDITFORM_OUTPUT
  */
 function html_edit_form($param) {
+    global $TEXT;
     extract($param);
-    global $conf;
-    global $license;
-    global $lang;
-    global $REV;
-    global $DATE;
-    global $PRE;
-    global $SUF;
-    global $INFO;
-    global $SUM;
-    global $ID;
-    ?>
-            <?php if($wr){?>
-                <script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--
-                    <?php /* sets changed to true when previewed */?>
-                    textChanged = <?php ($mod) ? print 'true' : print 'false' ?>;
-                //--><!]]></script>
-            <?php } ?>
-        <div style="width:99%;">
-
-        <div class="toolbar">
-        <div id="draft__status"><?php if(!empty($INFO['draft'])) echo $lang['draftdate'].' '.dformat();?></div>
-        <div id="tool__bar"><?php if($wr){?><a href="<?php echo DOKU_BASE?>lib/exe/mediamanager.php?ns=<?php echo $INFO['namespace']?>"
-            target="_blank"><?php echo $lang['mediaselect'] ?></a><?php }?></div>
-
-        </div>
-        <?php
-        $form = new Doku_Form(array('id' => 'dw__editform'));
-        $form->addHidden('id', $ID);
-        $form->addHidden('rev', $REV);
-        $form->addHidden('date', $DATE);
-        $form->addHidden('prefix', $PRE);
-        $form->addHidden('suffix', $SUF);
-        $form->addHidden('changecheck', $check);
-        $attr = array('tabindex'=>'1');
-        if (!$wr) $attr['readonly'] = 'readonly';
-        $form->addElement(form_makeWikiText($text, $attr));
-        $form->addElement(form_makeOpenTag('div', array('id'=>'wiki__editbar')));
-        $form->addElement(form_makeOpenTag('div', array('id'=>'size__ctl')));
-        $form->addElement(form_makeCloseTag('div'));
-        if ($wr) {
-            $form->addElement(form_makeOpenTag('div', array('class'=>'editButtons')));
-            $form->addElement(form_makeButton('submit', 'save', $lang['btn_save'], array('id'=>'edbtn__save', 'accesskey'=>'s', 'tabindex'=>'4')));
-            $form->addElement(form_makeButton('submit', 'preview', $lang['btn_preview'], array('id'=>'edbtn__preview', 'accesskey'=>'p', 'tabindex'=>'5')));
-            $form->addElement(form_makeButton('submit', 'draftdel', $lang['btn_cancel'], array('tabindex'=>'6')));
-            $form->addElement(form_makeCloseTag('div'));
-            $form->addElement(form_makeOpenTag('div', array('class'=>'summary')));
-            $form->addElement(form_makeTextField('summary', $SUM, $lang['summary'], 'edit__summary', 'nowrap', array('size'=>'50', 'tabindex'=>'2')));
-            $elem = html_minoredit();
-            if ($elem) $form->addElement($elem);
-            $form->addElement(form_makeCloseTag('div'));
-        }
-        $form->addElement(form_makeCloseTag('div'));
-        if($wr && $conf['license']){
-            $form->addElement(form_makeOpenTag('div', array('class'=>'license')));
-            $out  = $lang['licenseok'];
-            $out .= '<a href="'.$license[$conf['license']]['url'].'" rel="license" class="urlextern"';
-            if(isset($conf['target']['external'])) $out .= ' target="'.$conf['target']['external'].'"';
-            $out .= '> '.$license[$conf['license']]['name'].'</a>';
-            $form->addElement($out);
-            $form->addElement(form_makeCloseTag('div'));
-        }
-        html_form('edit', $form);
-        print '</div>'.NL;
+    $attr = array('tabindex'=>'1');
+    if (!$wr) $attr['readonly'] = 'readonly';
+    $form->addElement(form_makeWikiText($TEXT, $attr));
 }
 
 /**

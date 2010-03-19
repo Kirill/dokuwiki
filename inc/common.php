@@ -7,13 +7,6 @@
  */
 
 if(!defined('DOKU_INC')) die('meh.');
-require_once(DOKU_INC.'inc/io.php');
-require_once(DOKU_INC.'inc/changelog.php');
-require_once(DOKU_INC.'inc/utf8.php');
-require_once(DOKU_INC.'inc/mail.php');
-require_once(DOKU_INC.'inc/parserutils.php');
-require_once(DOKU_INC.'inc/infoutils.php');
-require_once DOKU_INC.'inc/subscription.php';
 
 /**
  * These constants are used with the recents function
@@ -165,7 +158,7 @@ function pageinfo(){
     }else{
         $info['writable'] = ($info['perm'] >= AUTH_CREATE);
     }
-    $info['editable']  = ($info['writable'] && empty($info['lock']));
+    $info['editable']  = ($info['writable'] && empty($info['locked']));
     $info['lastmod']   = @filemtime($info['filepath']);
 
     //load page meta data
@@ -809,14 +802,16 @@ function rawWiki($id,$rev=''){
 /**
  * Returns the pagetemplate contents for the ID's namespace
  *
+ * @triggers COMMON_PAGE_FROMTEMPLATE
  * @author Andreas Gohr <andi@splitbrain.org>
  */
-function pageTemplate($data){
-    $id = $data[0];
+function pageTemplate($id){
     global $conf;
 
-    $path = dirname(wikiFN($id));
+    if (is_array($id)) $id = $id[0];
 
+    $path = dirname(wikiFN($id));
+    $tpl = '';
     if(@file_exists($path.'/_template.txt')){
         $tpl = io_readFile($path.'/_template.txt');
     }else{
@@ -830,16 +825,22 @@ function pageTemplate($data){
             $path = substr($path, 0, strrpos($path, '/'));
         }
     }
-    return isset($tpl) ? parsePageTemplate($tpl, $id) : '';
+    $data = compact('tpl', 'id');
+    trigger_event('COMMON_PAGE_FROMTEMPLATE', $data, 'parsePageTemplate', true);
+    return $data['tpl'];
 }
 
 /**
  * Performs common page template replacements
+ * This is the default action for COMMON_PAGE_FROMTEMPLATE
  *
  * @author Andreas Gohr <andi@splitbrain.org>
  */
-function parsePageTemplate($tpl, $id) {
+function parsePageTemplate($data) {
+    extract($data);
+
     global $USERINFO;
+    global $conf;
 
     // replace placeholders
     $file = noNS($id);
@@ -1023,7 +1024,6 @@ function saveWikiText($id,$text,$summary,$minor=false){
 
     // if useheading is enabled, purge the cache of all linking pages
     if(useHeading('content')){
-        require_once(DOKU_INC.'inc/fulltext.php');
         $pages = ft_backlinks($id);
         foreach ($pages as $page) {
             $cache = new cache_renderer($page, wikiFN($page), 'xhtml');
@@ -1111,7 +1111,6 @@ function notify($id,$who,$rev='',$summary='',$minor=false,$replace=array()){
     }elseif($rev){
         $subject = $lang['mail_changed'].' '.$id;
         $text = str_replace('@OLDPAGE@',wl($id,"rev=$rev",true,'&'),$text);
-        require_once(DOKU_INC.'inc/DifferenceEngine.php');
         $df  = new Diff(explode("\n",rawWiki($id,$rev)),
                         explode("\n",rawWiki($id)));
         $dformat = new UnifiedDiffFormatter();
