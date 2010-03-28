@@ -1121,6 +1121,8 @@ function html_updateprofile(){
  * Preprocess edit form data
  *
  * @author   Andreas Gohr <andi@splitbrain.org>
+ *
+ * @triggers HTML_EDITFORM_OUTPUT
  */
 function html_edit(){
     global $ID;
@@ -1133,6 +1135,7 @@ function html_edit(){
     global $lang;
     global $conf;
     global $TEXT;
+    global $RANGE;
 
     if (isset($_REQUEST['changecheck'])) {
         $check = $_REQUEST['changecheck'];
@@ -1167,14 +1170,25 @@ function html_edit(){
     $form->addHidden('suffix', $SUF);
     $form->addHidden('changecheck', $check);
 
-    $data = compact('wr', 'form');
-    $data['media_manager'] = true;
-    $data['intro_locale'] = $include;
-    trigger_event('HTML_EDIT_FORMSELECTION', $data, 'html_edit_form', true);
+    $data = array('form' => $form,
+                  'wr'   => $wr,
+                  'media_manager' => true,
+                  'target' => (isset($_REQUEST['target']) && $wr &&
+                               $RANGE !== '') ? $_REQUEST['target'] : 'section',
+                  'intro_locale' => $include);
+
+    if ($data['target'] !== 'section') {
+        // Only emit event if page is writable, section edit data is valid and
+        // edit target is not section.
+        trigger_event('HTML_EDIT_FORMSELECTION', $data, 'html_edit_form', true);
+    } else {
+        html_edit_form($data);
+    }
     if (isset($data['intro_locale'])) {
         echo p_locale_xhtml($data['intro_locale']);
     }
 
+    $form->addHidden('target', $data['target']);
     $form->addElement(form_makeOpenTag('div', array('id'=>'wiki__editbar')));
     $form->addElement(form_makeOpenTag('div', array('id'=>'size__ctl')));
     $form->addElement(form_makeCloseTag('div'));
@@ -1203,9 +1217,9 @@ function html_edit(){
 
     if ($wr) {
         // sets changed to true when previewed
-        echo '<script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--';
+        echo '<script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--'. NL;
         echo 'textChanged = ' . ($mod ? 'true' : 'false');
-        echo '//--><!]]></script>';
+        echo '//--><!]]></script>' . NL;
     } ?>
     <div style="width:99%;">
 
@@ -1225,15 +1239,18 @@ function html_edit(){
  * Display the default edit form
  *
  * Is the default action for HTML_EDIT_FORMSELECTION.
- *
- * @triggers HTML_EDITFORM_OUTPUT
  */
 function html_edit_form($param) {
     global $TEXT;
-    extract($param);
+
+    if ($param['target'] !== 'section') {
+        msg('No editor for edit target ' . $param['target'] . ' found.', -1);
+    }
+
     $attr = array('tabindex'=>'1');
-    if (!$wr) $attr['readonly'] = 'readonly';
-    $form->addElement(form_makeWikiText($TEXT, $attr));
+    if (!$param['wr']) $attr['readonly'] = 'readonly';
+
+    $param['form']->addElement(form_makeWikiText($TEXT, $attr));
 }
 
 /**
