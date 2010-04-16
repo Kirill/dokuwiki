@@ -462,6 +462,7 @@ div.dokuwiki blockquote {
 }
 
 div.dokuwiki pre {
+  font-family: monospace;
   font-size: 120%;
   padding: 0.5em;
   border: 1px dashed __border__;
