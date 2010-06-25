@@ -343,6 +343,11 @@ function act_revert($act){
     global $ID;
     global $REV;
     global $lang;
+    // FIXME $INFO['writable'] currently refers to the attic version
+    // global $INFO;
+    // if (!$INFO['writable']) {
+    //     return 'show';
+    // }
 
     // when no revision is given, delete current one
     // FIXME this feature is not exposed in the GUI currently
@@ -382,16 +387,6 @@ function act_revert($act){
 function act_redirect($id,$preact){
     global $PRE;
     global $TEXT;
-    global $MSG;
-
-    //are there any undisplayed messages? keep them in session for display
-    //on the next page
-    if(isset($MSG) && count($MSG)){
-        //reopen session, store data and close session again
-        @session_start();
-        $_SESSION[DOKU_COOKIE]['msg'] = $MSG;
-        session_write_close();
-    }
 
     $opts = array(
             'id'       => $id,
