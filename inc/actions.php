@@ -231,7 +231,7 @@ function act_permcheck($act){
         }else{
             $permneed = AUTH_CREATE;
         }
-    }elseif(in_array($act,array('login','search','recent','profile'))){
+    }elseif(in_array($act,array('login','search','recent','profile','index'))){
         $permneed = AUTH_NONE;
     }elseif($act == 'revert'){
         $permneed = AUTH_ADMIN;
@@ -595,6 +595,9 @@ function act_subscription($act){
     global $lang;
     global $INFO;
     global $ID;
+
+    // subcriptions work for logged in users only
+    if(!$_SERVER['REMOTE_USER']) return 'show';
 
     // get and preprocess data.
     $params = array();
