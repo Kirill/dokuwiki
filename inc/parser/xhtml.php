@@ -442,6 +442,13 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
             $this->doc .= '</a></dt>'.DOKU_LF.'<dd>';
         }
 
+        if ($text{0} == "\n") {
+            $text = substr($text, 1);
+        }
+        if (substr($text, -1) == "\n") {
+            $text = substr($text, 0, -1);
+        }
+
         if ( is_null($language) ) {
             $this->doc .= '<pre class="'.$type.'">'.$this->_xmlEntities($text).'</pre>'.DOKU_LF;
         } else {
@@ -899,11 +906,11 @@ class Doku_Renderer_xhtml extends Doku_Renderer {
         global $lang;
         // initialize the row counter used for classes
         $this->_counter['row_counter'] = 0;
-        $this->doc .= '<table class="inline ' . $this->startSectionEdit($pos, 'table') . '">'.DOKU_LF;
+        $this->doc .= '<div class="table ' . $this->startSectionEdit($pos, 'table') . '"><table class="inline">'.DOKU_LF;
     }
 
     function table_close($pos){
-        $this->doc .= '</table>'.DOKU_LF;
+        $this->doc .= '</table></div>'.DOKU_LF;
         $this->finishSectionEdit($pos);
     }
 

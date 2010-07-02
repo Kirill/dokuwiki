@@ -100,7 +100,7 @@ $lang['lockedby']     = 'Currently locked by';
 $lang['lockexpire']   = 'Lock expires at';
 $lang['willexpire']   = 'Your lock for editing this page is about to expire in a minute.\nTo avoid conflicts use the preview button to reset the locktimer.';
 
-$lang['js']['notsavedyet'] = "Unsaved changes will be lost.\nReally continue?";
+$lang['js']['notsavedyet'] = "Unsaved changes will be lost.";
 $lang['rssfailed']   = 'An error occurred while fetching this feed: ';
 $lang['nothingfound']= 'Nothing was found.';
 
@@ -119,6 +119,7 @@ $lang['deletefail']  = '"%s" couldn\'t be deleted - check permissions.';
 $lang['mediainuse']  = 'The file "%s" hasn\'t been deleted - it is still in use.';
 $lang['namespaces']  = 'Namespaces';
 $lang['mediafiles']  = 'Available files in';
+$lang['accessdenied'] = 'You are not allowed to view this page.';
 
 $lang['js']['searchmedia']    = 'Search for files';
 $lang['js']['keepopen']    = 'Keep window open on selection';
@@ -162,6 +163,7 @@ $lang['current']    = 'current';
 $lang['yours']      = 'Your Version';
 $lang['diff']       = 'Show differences to current revisions';
 $lang['diff2']      = 'Show differences between selected revisions';
+$lang['difflink']   = 'Link to this diff output';
 $lang['line']       = 'Line';
 $lang['breadcrumb'] = 'Trace';
 $lang['youarehere'] = 'You are here';
@@ -282,6 +284,7 @@ $lang['i_pol1']       = 'Public Wiki (read for everyone, write and upload for re
 $lang['i_pol2']       = 'Closed Wiki (read, write, upload for registered users only)';
 
 $lang['i_retry']      = 'Retry';
+$lang['i_license']    = 'Please choose the license you want to put your content under:';
 
 $lang['mu_intro']     = 'Here you can upload multiple files at once. Click the browse button to add them to the queue. Press upload when done.';
 $lang['js']['mu_btn'] = 'Upload multiple files at once';

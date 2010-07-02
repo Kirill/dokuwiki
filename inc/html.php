@@ -137,7 +137,8 @@ function html_secedit_get_button($data) {
                        " editbutton_" . $secid . "'>" .
            html_btn('secedit', $ID, '',
                     array_merge(array('do'  => 'edit',
-                                      'rev' => $INFO['lastmod']), $data),
+                                      'rev' => $INFO['lastmod'],
+                                      'summary' => '['.$name.'] '), $data),
                     'post', $name) . '</div>';
 }
 
@@ -336,18 +337,22 @@ function html_search(){
     //do quick pagesearch
     $data = array();
 
-    if($id) $data = ft_pageLookup($id);
+    if($id) $data = ft_pageLookup($id,true,useHeading('navigation'));
     if(count($data)){
         print '<div class="search_quickresult">';
         print '<h3>'.$lang['quickhits'].':</h3>';
         print '<ul class="search_quickhits">';
-        foreach($data as $id){
+        foreach($data as $id => $title){
             print '<li> ';
-            $ns = getNS($id);
-            if($ns){
-                $name = shorten(noNS($id), ' ('.$ns.')',30);
+            if (useHeading('navigation')) {
+                $name = $title;
             }else{
-                $name = $id;
+                $ns = getNS($id);
+                if($ns){
+                    $name = shorten(noNS($id), ' ('.$ns.')',30);
+                }else{
+                    $name = $id;
+                }
             }
             print html_wikilink(':'.$id,$name);
             print '</li> ';
@@ -986,6 +991,12 @@ function html_diff($text='',$intro=true){
 
     $tdf = new TableDiffFormatter();
     if($intro) print p_locale_xhtml('diff');
+
+    if (!$text) {
+        ptln('<div class="level1"><p>');
+        ptln('  <a class="wikilink1" href="'.wl($ID, 'do=diff&rev2[]='.$l_rev.'&rev2[]='.$r_rev).'">'.$lang['difflink'].'</a>');
+        ptln('</p></div>');
+    }
     ?>
     <table class="diff">
     <tr>
