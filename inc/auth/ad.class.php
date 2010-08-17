@@ -116,7 +116,13 @@ class auth_ad extends auth_basic {
            $this->cnf['sso']) return true;
 
         if(!$this->_init()) return false;
-        return $this->adldap->authenticate($user, $pass);
+
+        if ($this->cnf['require_group']) {
+           if ( ! $this->adldap->authenticate($user, $pass) ) return false;
+           return $this->adldap->user_ingroup($user, $this->cnf['require_group'], $this->cnf['recursive_groups'] );
+        } else {
+           return $this->adldap->authenticate($user, $pass);
+        }
     }
 
     /**
