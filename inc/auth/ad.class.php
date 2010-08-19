@@ -22,6 +22,7 @@
  *   $conf['auth']['ad']['sso']                = 1;
  *   $conf['auth']['ad']['ad_username']        = 'root';
  *   $conf['auth']['ad']['ad_password']        = 'pass';
+ *   $conf['auth']['ad']['require_group']      = 'Domain_Admins';
  *   $conf['auth']['ad']['real_primarygroup']  = 1;
  *   $conf['auth']['ad']['use_ssl']            = 1;
  *   $conf['auth']['ad']['debug']              = 1;
