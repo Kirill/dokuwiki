@@ -1175,7 +1175,7 @@ class Doku_Handler_Table {
                     $this->tableStart($call);
                 break;
                 case 'table_row':
-                    $this->tableRowClose(array('tablerow_close',$call[1],$call[2]));
+                    $this->tableRowClose($call);
                     $this->tableRowOpen(array('tablerow_open',$call[1],$call[2]));
                 break;
                 case 'tableheader':
@@ -1183,7 +1183,7 @@ class Doku_Handler_Table {
                     $this->tableCell($call);
                 break;
                 case 'table_end':
-                    $this->tableRowClose(array('tablerow_close', array()));
+                    $this->tableRowClose($call);
                     $this->tableEnd($call);
                 break;
                 default:
@@ -1221,7 +1221,7 @@ class Doku_Handler_Table {
                 break;
             }
         }
-        $this->tableCalls[] = $call;
+        $this->tableCalls[] = array('tablerow_close', array(), $call[2]);
 
         if ( $this->currentCols > $this->maxCols ) {
             $this->maxCols = $this->currentCols;
@@ -1279,19 +1279,24 @@ class Doku_Handler_Table {
         // Look for the colspan elements and increment the colspan on the
         // previous non-empty opening cell. Once done, delete all the cells
         // that contain colspans
-        foreach ( $this->tableCalls as $key => $call ) {
+        for ($key = 0 ; $key < count($this->tableCalls) ; ++$key) {
+            $call = $this->tableCalls[$key];
 
-            if ( $call[0] == 'tablerow_open' ) {
+            switch ($call[0]) {
+            case 'tablerow_open':
 
                 $lastRow++;
                 $lastCell = 0;
+                break;
 
-            } else if ( $call[0] == 'tablecell_open' || $call[0] == 'tableheader_open' ) {
+            case 'tablecell_open':
+            case 'tableheader_open':
 
                 $lastCell++;
                 $cellKey[$lastRow][$lastCell] = $key;
+                break;
 
-            } else if ( $call[0] == 'table_align' ) {
+            case 'table_align':
 
                 $prev = in_array($this->tableCalls[$key-1][0], array('tablecell_open', 'tableheader_open'));
                 $next = in_array($this->tableCalls[$key+1][0], array('tablecell_close', 'tableheader_close'));
@@ -1315,8 +1320,9 @@ class Doku_Handler_Table {
 
                 // Now convert the whitespace back to cdata
                 $this->tableCalls[$key][0] = 'cdata';
+                break;
 
-            } else if ( $call[0] == 'colspan' ) {
+            case 'colspan':
 
                 $this->tableCalls[$key-1][1][0] = false;
 
@@ -1336,8 +1342,9 @@ class Doku_Handler_Table {
                 $toDelete[] = $key-1;
                 $toDelete[] = $key;
                 $toDelete[] = $key+1;
+                break;
 
-            } else if ( $call[0] == 'rowspan' ) {
+            case 'rowspan':
 
                 if ( $this->tableCalls[$key-1][0] == 'cdata' ) {
                     // ignore rowspan if previous call was cdata (text mixed with :::) we don't have to check next call as that wont match regex
@@ -1345,25 +1352,48 @@ class Doku_Handler_Table {
 
                 } else {
 
-                    $this->tableCalls[$key-1][1][2] = false;
-
+                    $spanning_cell = null;
                     for($i = $lastRow-1; $i > 0; $i--) {
 
                         if ( $this->tableCalls[$cellKey[$i][$lastCell]][0] == 'tablecell_open' || $this->tableCalls[$cellKey[$i][$lastCell]][0] == 'tableheader_open' ) {
 
-                            if ( false !== $this->tableCalls[$cellKey[$i][$lastCell]][1][2] ) {
-                                $this->tableCalls[$cellKey[$i][$lastCell]][1][2]++;
+                            if ($this->tableCalls[$cellKey[$i][$lastCell]][1][2] >= $lastRow - $i) {
+                                $spanning_cell = $i;
                                 break;
                             }
 
 
                         }
                     }
+                    if (is_null($spanning_cell)) {
+                        // No spanning cell found, so convert this cell to
+                        // an empty one to avoid broken tables
+                        $this->tableCells[$key][1][1] = '';
+                        continue;
+                    }
+                    $this->tableCalls[$cellKey[$spanning_cell][$lastCell]][1][2]++;
+
+                    $this->tableCalls[$key-1][1][2] = false;
 
                     $toDelete[] = $key-1;
                     $toDelete[] = $key;
-                    $toDelete[] = $key+1; 
+                    $toDelete[] = $key+1;
                 }
+                break;
+
+            case 'tablerow_close':
+
+                // Fix broken tables by adding missing cells
+                while (++$lastCell < $this->maxCols) {
+                    array_splice($this->tableCalls, $key, 0, array(
+                           array('tablecell_open', array(1, null, 1), $call[2]),
+                           array('cdata', array(''), $call[2]),
+                           array('tablecell_close', array(), $call[2])));
+                    $key += 3;
+                }
+
+                break;
+
             }
         }
 
